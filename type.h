@@ -13,15 +13,18 @@ GD    *gp;
 INODE *ip;
 DIR   *dp;
 
+//ext2 block numbers
 #define SUPERBLOCK        1
 #define GDBLOCK           2
 #define ROOT_INODE        2
 
+//dir and file modes and ext2 magic number
 #define DIR_MODE    0040777
 #define FILE_MODE   0100644
 #define SUPER_MAGIC  0xEF53
 #define SUPER_USER        0
 
+//proc status
 #define FREE              0
 #define READY             1
 #define RUNNING           2
@@ -29,24 +32,28 @@ DIR   *dp;
 #define BLKSIZE        1024
 #define BLOCK_SIZE     1024
 
+//number of ext2 fs structures
 #define NMINODE         100
 #define NFD              16
-#define NPROC             4
+#define NPROC            10
+#define NOFT            100
+#define NMOUNT           10
+
 
 typedef struct minode{//in memory inodes
-  INODE INODE;
-  int dev, ino;
-  int refCount;
-  int dirty;
-  int mounted;
+  INODE  *INODE;
+  int    dev, ino;
+  int    refCount;
+  int    dirty;
+  int    mounted;
   struct mntable *mptr;
 }MINODE;
 
-typedef struct oft{//open file instance
-  int  mode;
-  int  refCount;
+typedef struct oft{//open file table
+  int    mode;
+  int    refCount;
   MINODE *mptr;
-  int  offset;
+  int    offset;
 }OFT;
 
 typedef struct proc{
@@ -58,3 +65,12 @@ typedef struct proc{
   MINODE      *cwd;
   OFT         *fd[NFD];
 }PROC;
+
+typedef struct mount{//mounted file system
+  int    dev;
+  int    nblocks,ninodes;
+  int    bmap, imap, iblk;
+  MINODE *mounted_inode;
+  char   name[64];
+  char   mount_name[64];
+}MOUNT;
