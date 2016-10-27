@@ -9,8 +9,8 @@
 MINODE minode[NMINODE];
 MINODE *root;
 PROC   proc[NPROC], *running;
-MOUNT mntTable[NMOUNT];
-OFT oft[NOFT];
+MOUNT  mntTable[NMOUNT];
+OFT    oft[NOFT];
 
 int dev;
 int nblocks;

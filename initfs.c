@@ -1,7 +1,5 @@
-
 #include "type.h"
 #include "include.h"
-
 
 int init(){ // Initialize data structures of LEVEL-1:
      int i, j;
@@ -21,6 +19,7 @@ int init(){ // Initialize data structures of LEVEL-1:
      printf("mounting root..\n");
      mount_root();
      printf("mount complete\n");
+     printf("starting P0\n");
      p = running;
      p = &proc[0];
      p->status = RUNNING;
@@ -31,6 +30,7 @@ int init(){ // Initialize data structures of LEVEL-1:
      p->cwd = root;
      p->cwd->refCount++;
 
+     printf("starting P1\n");
      p = &proc[1];
      p->next = &proc[0];
      p->status = RUNNING;
@@ -137,7 +137,12 @@ int main()
 //      stat(pathname, &mystat); // struct stat mystat; print mystat information
   }
 //
-// 9.int quit()
-//   {
-//       iput all DIRTY minodes before shutdown
-//   }
+int quit()
+{
+//      iput all DIRTY minodes before shutdown
+  int i;
+  for(i=0;i<NMINODE;i++)
+    if(minode[i].dirty)
+      iput(minode[i]);
+  exit(0);
+}

@@ -41,17 +41,21 @@ DIR   *dp;
 
 
 typedef struct minode{//in memory inodes
-  INODE  *INODE;
-  int    dev, ino;
-  int    refCount;
-  int    dirty;
-  int    mounted;
-  struct mount *mptr;
+  INODE        *INODE;
+  int          dev, ino;
+  int          refCount;
+  int          dirty;
+  int          mounted;
+  struct mount *mountptr;
+  struct proc  *next;
+  struct proc  *parent;
+  struct proc  *child;
+  struct proc  *sibling;
 }MINODE;
 
 typedef struct mount{
   int    dev;
-  int    nblocks,ninodes;
+  int    nblocks, ninodes;
   int    bmap, imap, iblk;
   MINODE *mounted_inode;
   char   name[64];
@@ -71,6 +75,6 @@ typedef struct proc{
   int          ppid;
   int          status;
   int          uid, gid;
-  MINODE      *cwd;
-  OFT         *fd[NFD];
+  MINODE       *cwd;
+  OFT          *fd[NFD];
 }PROC;
