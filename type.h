@@ -46,8 +46,17 @@ typedef struct minode{//in memory inodes
   int    refCount;
   int    dirty;
   int    mounted;
-  struct mntable *mptr;
+  struct mount *mptr;
 }MINODE;
+
+typedef struct mount{
+  int    dev;
+  int    nblocks,ninodes;
+  int    bmap, imap, iblk;
+  MINODE *mounted_inode;
+  char   name[64];
+  char   mount_name[64];
+}MOUNT;
 
 typedef struct oft{//open file table
   int    mode;
@@ -65,12 +74,3 @@ typedef struct proc{
   MINODE      *cwd;
   OFT         *fd[NFD];
 }PROC;
-
-typedef struct mount{//mounted file system
-  int    dev;
-  int    nblocks,ninodes;
-  int    bmap, imap, iblk;
-  MINODE *mounted_inode;
-  char   name[64];
-  char   mount_name[64];
-}MOUNT;

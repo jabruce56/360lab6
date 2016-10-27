@@ -78,18 +78,19 @@ u32 getino(int *dev, char *pathname){//returns inode # of a pathname.
 MINODE *iget(int dev, u32 ino){
   int i;
   MINODE *mip;
-  for(i=0;i<NMINODE;i++){
+  for(i=0;i<100;i++){
     if(minode[i].refCount>0 &&  minode[i].dev==dev && minode[i].ino ==ino){
       minode[i].refCount++;
       return &minode[i];
     }
   }
-  for(i=0;i<MINODE;i++){
+  for(i=0;i<100;i++){
     if(minode[i].refCount == 0){
-      *mip = &minode[i];
+      mip = &minode[i];
+      break;
     }
   }
-  
+
 }
 int iput(MINODE *mip){
 

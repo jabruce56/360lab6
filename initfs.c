@@ -21,7 +21,28 @@ int init(){ // Initialize data structures of LEVEL-1:
      printf("mounting root..\n");
      mount_root();
      printf("mount complete\n");
-   }
+     p = running;
+     p = &proc[0];
+     p->status = RUNNING;
+     p->uid = 0;
+     p->pid = 0;
+     p->ppid = 0;
+     p->gid = 0;
+     p->cwd = root;
+     p->cwd->refCount++;
+
+     p = &proc[1];
+     p->next = &proc[0];
+     p->status = RUNNING;
+     p->uid = 2;
+     p->pid = 1;
+     p->ppid = 0;
+     p->gid = 0;
+     p->cwd = root;
+     p->cwd->refCount++;
+
+     //nproc = 2;
+}
 //
 // 4.. Write C code for
 //    Write C code for
