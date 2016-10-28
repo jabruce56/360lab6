@@ -7,9 +7,10 @@ int init(){ // Initialize data structures of LEVEL-1:
      //reset global proc and minode
      for(i=0;i<NPROC;i++){
        //if(i==0||i==1){proc[i].uid=i;}
-       proc[i].status=FREE;
-       for(j=0;j<NFD;j++){proc[i].fd[j]=0;}
-       proc[i].next = &proc[i+1];
+       p=&proc[i];
+       p->status=FREE;
+       for(j=0;j<NFD;j++){p->fd[j]=0;}
+       p->next = &proc[i+1];
      }
      for(i=0;i<NMINODE;i++){minode[i].refCount=0;}
      for(i=0;i<NOFT;i++){oft[i].refCount=0;}
@@ -72,7 +73,7 @@ int mount_root(){  // mount root file system, establish / and CWDs
     exit(0);
   }
   printf("valid ext2 fs\n");
-  mp = &mntTable[0];
+  mp = &mounttab[0];
   nblocks = sp->s_blocks_count;
   ninodes = sp->s_inodes_count;
   mp->ninodes=ninodes;
@@ -91,10 +92,12 @@ int mount_root(){  // mount root file system, establish / and CWDs
   printf("bmap=%d  ",   gp->bg_block_bitmap);
   printf("imap=%d  ",   gp->bg_inode_bitmap);
   printf("iblock=%d\n", gp->bg_inode_table);
+  printf("iget root\n");
   root=iget(dev, 2);
   mp->mounted_inode=root;
-  root->mptr = mp;
-//  root = iget(dev, 2);    /* get root inode */
+  root->mountptr = mp;
+  printf("root mounted\n");
+  //root = iget(dev, 2);    /* get root inode */
 //
 //  Let cwd of both P0 and P1 point at the root minode (refCount=3)
 //      P0.cwd = iget(dev, 2);
@@ -143,6 +146,6 @@ int quit()
   int i;
   for(i=0;i<NMINODE;i++)
     if(minode[i].dirty)
-      iput(minode[i]);
+      iput(&minode[i]);
   exit(0);
 }

@@ -1,7 +1,6 @@
 //#include "type.h"
-
-char buf[BLKSIZE], name[64];
-int fd;
+//int fd;
+char *name[64];
 
 int get_block(int fd, int blk, char buf[ ]){
   lseek(fd, (long)blk*BLKSIZE, 0);
@@ -68,30 +67,65 @@ u32 getino(int *dev, char *pathname){//returns inode # of a pathname.
   n=tokenize(pathname);
   for(i=0;i<n;i++){
     ino = search(dev, name[i]);
-    if(ino==0){
+    if(ino==0)
       return 0;
-    }
   }
   printf("%s\n", pathname);
   return ino;
 }
 MINODE *iget(int dev, u32 ino){
-  int i;
+  char gbuf[BLKSIZE];
+  int i, blk, offset;
   MINODE *mip;
+  INODE *ip;
+  printf("here we go\n");
   for(i=0;i<100;i++){
-    if(minode[i].refCount>0 &&  minode[i].dev==dev && minode[i].ino ==ino){
-      minode[i].refCount++;
-      return &minode[i];
+    mip=&minode[i];
+    if(mip->refCount>0 &&  mip->dev==dev && mip->ino ==ino){
+      mip->refCount++;
+      return &mip;
     }
   }
+  printf("try again\n");
   for(i=0;i<100;i++){
-    if(minode[i].refCount == 0){
-      mip = &minode[i];
-      break;
+    mip=&minode[i];
+    if(mip->refCount==0){
+      printf("%d\n", mounttab[0].iblk);
+      blk=(ino-1)/8+mounttab[0].iblk;
+      offset=(ino-1)%8;
+      get_block(dev, blk, gbuf);
+      ip=(INODE *)gbuf+offset;
+      mip->INODE=ip;
+      mip->dev=dev;
+      mip->ino=ino;
+      mip->refCount=1;
+      mip->dirty=0;
+      mip->mounted=0;
+      mip->mountptr=0;
+      mip->next=0;
+      mip->parent=0;
+      mip->child=0;
+      mip->sibling=0;
+      return mip;
     }
   }
-
 }
 int iput(MINODE *mip){
+  int ino, blk, offset;
+  INODE *ip;
+  char *buf[BLKSIZE];
+  if(--mip->refCount>0&&!mip->dirty){
+    ino=ialloc(dev);
+    blk=(ino-1)/8+mip->mountptr->iblk;
+    offset=(ino-1)%8;
+    get_block(mip->dev, blk, buf);
+    ip=(INODE *)buf+offset;
+    ip=mip->INODE;
+    put_block(mip->dev, blk, buf);
+  }
+  if(mip->refCount>0)
+    return 0;
+  if(!mip->dirty)
+    return 0;
 
 }

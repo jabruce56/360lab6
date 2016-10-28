@@ -9,7 +9,7 @@
 MINODE minode[NMINODE];
 MINODE *root;
 PROC   proc[NPROC], *running;
-MOUNT  mntTable[NMOUNT];
+MOUNT  mounttab[NMOUNT];
 OFT    oft[NOFT];
 
 int dev;
