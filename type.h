@@ -30,7 +30,6 @@ DIR   *dp;
 #define RUNNING           2
 
 #define BLKSIZE        1024
-#define BLOCK_SIZE     1024
 
 //number of ext2 fs structures
 #define NMINODE         100

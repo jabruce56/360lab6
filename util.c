@@ -63,6 +63,7 @@ u32 search(MINODE *mip, char *name){
   return 0;
 }
 u32 getino(int *dev, char *pathname){//returns inode # of a pathname.
+  //!!!!!!!!! probably doesnt follow a path of more than 1!!!!!!!but idk havent tested
   int n, i, ino, inostrt;
   n=tokenize(pathname);
   for(i=0;i<n;i++){
@@ -74,27 +75,31 @@ u32 getino(int *dev, char *pathname){//returns inode # of a pathname.
   return ino;
 }
 MINODE *iget(int dev, u32 ino){
-  char gbuf[BLKSIZE];
+  //read from disk, put into minode
+  char buf[BLKSIZE];
   int i, blk, offset;
   MINODE *mip;
   INODE *ip;
-  printf("here we go\n");
+
+  //find inode on disk w/ mailmans
+  blk=(ino-1)/8+mounttab[0].iblk;
+  offset=(ino-1)%8;
+  get_block(dev, blk, buf);
+  ip=(INODE *)buf+offset;
+
+  //check if inode is already in memory
   for(i=0;i<100;i++){
     mip=&minode[i];
     if(mip->refCount>0 &&  mip->dev==dev && mip->ino ==ino){
-      mip->refCount++;
+      mip->refCount++;//if so inc ref count and return
       return &mip;
     }
   }
-  printf("try again\n");
+
+  //not in memory yet
   for(i=0;i<100;i++){
     mip=&minode[i];
-    if(mip->refCount==0){
-      printf("%d\n", mounttab[0].iblk);
-      blk=(ino-1)/8+mounttab[0].iblk;
-      offset=(ino-1)%8;
-      get_block(dev, blk, gbuf);
-      ip=(INODE *)gbuf+offset;
+    if(mip->refCount==0){//take first available minode
       mip->INODE=ip;
       mip->dev=dev;
       mip->ino=ino;
@@ -110,22 +115,15 @@ MINODE *iget(int dev, u32 ino){
     }
   }
 }
-int iput(MINODE *mip){
+int iput(MINODE *mip){//release inode from memory
   int ino, blk, offset;
   INODE *ip;
   char *buf[BLKSIZE];
-  if(--mip->refCount>0&&!mip->dirty){
-    ino=ialloc(dev);
-    blk=(ino-1)/8+mip->mountptr->iblk;
-    offset=(ino-1)%8;
-    get_block(mip->dev, blk, buf);
-    ip=(INODE *)buf+offset;
-    ip=mip->INODE;
-    put_block(mip->dev, blk, buf);
-  }
-  if(mip->refCount>0)
-    return 0;
-  if(!mip->dirty)
-    return 0;
 
+  if(--mip->refCount==0&&mip->dirty){//if dirty and last reference in memory
+    memcpy(buf, mip->INODE, BLKSIZE);
+    put_block(mip->dev, blk, buf);//write back
+  }
+  else if(mip->refCount>0||!mip->dirty)
+    return 0;
 }

@@ -86,12 +86,14 @@ int mount_root(){  // mount root file system, establish / and CWDs
   mp->bmap=gp->bg_block_bitmap;
   mp->imap=gp->bg_inode_bitmap;
   mp->iblk=gp->bg_inode_table;
+  
 
   strcpy(mp->name, "disk");
   strcpy(mp->mount_name, "/");
   printf("bmap=%d  ",   gp->bg_block_bitmap);
   printf("imap=%d  ",   gp->bg_inode_bitmap);
   printf("iblock=%d\n", gp->bg_inode_table);
+  printf("dev=%d\n", dev);
   printf("iget root\n");
   root=iget(dev, 2);
   mp->mounted_inode=root;
@@ -131,6 +133,8 @@ int main()
   {
     //printf("%d\n", getino(2, "a/b");
     init();
+    printf("proc[0].pid=%d\nproc[0].status=%d\nproc[0].uid=%d\n",proc[0].pid,proc[0].status,proc[0].uid);
+    printf("dev=%d\n",dev);
     //  mount_root();
 //      // ask for a command string, e.g. ls pathname
 //      ls(pathname);
