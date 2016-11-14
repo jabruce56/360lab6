@@ -9,8 +9,10 @@ int init(){ // Initialize data structures of LEVEL-1:
        //if(i==0||i==1){proc[i].uid=i;}
        p=&proc[i];
        p->status=FREE;
-       for(j=0;j<NFD;j++){p->fd[j]=0;}
-       p->next = &proc[i+1];
+       for(j=0;j<NFD;j++){
+         p->fd[j]=0;
+         p->cwd=0;
+       }
      }
      for(i=0;i<NMINODE;i++){minode[i].refCount=0;}
      for(i=0;i<NOFT;i++){oft[i].refCount=0;}
@@ -21,11 +23,12 @@ int init(){ // Initialize data structures of LEVEL-1:
      mount_root();
      printf("mount complete\n");
      printf("starting P0\n");
-     p = running;
+     running = &proc[0];
      p = &proc[0];
      p->status = RUNNING;
+     p->next = &proc[1];
      p->uid = 0;
-     p->pid = 0;
+     p->pid = 1;
      p->ppid = 0;
      p->gid = 0;
      p->cwd = root;
@@ -35,7 +38,7 @@ int init(){ // Initialize data structures of LEVEL-1:
      p = &proc[1];
      p->next = &proc[0];
      p->status = RUNNING;
-     p->uid = 2;
+     p->uid = 1;
      p->pid = 1;
      p->ppid = 0;
      p->gid = 0;
@@ -86,7 +89,7 @@ int mount_root(){  // mount root file system, establish / and CWDs
   mp->bmap=gp->bg_block_bitmap;
   mp->imap=gp->bg_inode_bitmap;
   mp->iblk=gp->bg_inode_table;
-  
+
 
   strcpy(mp->name, "disk");
   strcpy(mp->mount_name, "/");
@@ -98,6 +101,8 @@ int mount_root(){  // mount root file system, establish / and CWDs
   root=iget(dev, 2);
   mp->mounted_inode=root;
   root->mountptr = mp;
+  proc[0].cwd=iget(dev,2);
+  proc[1].cwd=iget(dev,2);
   printf("root mounted\n");
   //root = iget(dev, 2);    /* get root inode */
 //
@@ -105,21 +110,27 @@ int mount_root(){  // mount root file system, establish / and CWDs
 //      P0.cwd = iget(dev, 2);
 //      P1.cwd = iget(dev, 2);
 }
-// 6. ls [pathname] command:
-//    {
-//       int ino, dev = running->cwd->dev;
-//       MINODE *mip = running->cwd;
-//
-//       if (pathname){   // ls pathname:
-//           if (pathname[0]=='/')
-//              dev = root->dev;
-//           ino         = getino(&dev, pathname);
-//           MINODE *mip = iget(dev, ino);
-//       }
-//       // mip points at minode;
-//       // Each data block of mip->INODE contains DIR entries
-//       // print the name strings of the DIR entries
-//    }
+
+
+ls (char *pathname)
+{
+  int i, ino, dev = running->cwd->dev;
+  MINODE *mip = running->cwd;
+
+  if (pathname[0]!='\0'){   // ls pathname:
+
+    pathname[strlen(pathname)-1]='\0';
+    printf("pathname=%s\n", pathname);
+    if (pathname[0]=='/')
+
+    ino = getino(&dev, pathname);
+    mip = iget(dev, ino);
+  }
+  dir(mip->INODE);
+  // mip points at minode;
+  // Each data block of mip->INODE contains DIR entries
+  // print the name strings of the DIR entries
+}
 //
 // 7. cd(char *pathname)
 //    {
@@ -131,11 +142,19 @@ int mount_root(){  // mount root file system, establish / and CWDs
 //
 int main()
   {
+    char line[256];
     //printf("%d\n", getino(2, "a/b");
     init();
-    printf("proc[0].pid=%d\nproc[0].status=%d\nproc[0].uid=%d\n",proc[0].pid,proc[0].status,proc[0].uid);
+    printf("proc[0].pid=%d\nproc[0].status=%d\nproc[0].uid=%d\nproc[0].",proc[0].pid,proc[0].status,proc[0].uid);
     printf("dev=%d\n",dev);
-    //  mount_root();
+    printf("init complete\n");
+    while(1){
+      printf("command: ");
+      fgets(line, sizeof(line), stdin);
+      if(!strncmp(line, "ls", 2)){
+        ls(&line[3]);
+      }
+    }
 //      // ask for a command string, e.g. ls pathname
 //      ls(pathname);
 //      // ask for a command string, e.g. cd pathname
