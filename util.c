@@ -1,14 +1,22 @@
 //#include "type.h"
 char *name[64];
 
+/******************************************************************************/
+
 int get_block(int fd, int blk, char buf[ ]){
   lseek(fd, (long)blk*BLKSIZE, 0);
   read(fd, buf, BLKSIZE);
 }
+
+/******************************************************************************/
+
 int put_block(int fd, int blk, char buf[ ]){
   lseek(fd, (long)blk*BLKSIZE, 0);
   write(fd, buf, BLKSIZE);
 }
+
+/******************************************************************************/
+
 int tokenize(char *pathname){
   char *token, path[128], names[64][64];
   int i = 0, j;
@@ -32,6 +40,8 @@ int tokenize(char *pathname){
 // .          .         .
 // ..         .         ..
 
+/******************************************************************************/
+
 pdir(INODE *tip){
   struct stat nstat;
   char *buf[BLKSIZE];
@@ -52,6 +62,9 @@ pdir(INODE *tip){
     }
   }
 }
+
+/******************************************************************************/
+
 u32 search(MINODE *mip, char *pathname){
   int n = 0, i = 0, j = 0;
   char *cp, sbuf[BLKSIZE];
@@ -80,6 +93,9 @@ u32 search(MINODE *mip, char *pathname){
   printf("search found nothing with the name %s\n", name);
   return 0;
 }
+
+/******************************************************************************/
+
 u32 getino(int *dev, char *pathname){//returns inode # of a pathname
   int n, i, ino, inostrt;
   if(pathname[0]=='/')
@@ -95,6 +111,9 @@ u32 getino(int *dev, char *pathname){//returns inode # of a pathname
   }
   return ino;
 }
+
+/******************************************************************************/
+
 MINODE *iget(int dev, u32 ino){
   //read from disk, put into minode
   char buf[BLKSIZE];
@@ -144,17 +163,28 @@ MINODE *iget(int dev, u32 ino){
     }
   }
 }
+
+/******************************************************************************/
+
 int iput(MINODE *mip){//release inode from memory
   int ino, blk, offset;
   char *buf[BLKSIZE];
-  if(--mip->refCount==0&&mip->dirty){//if dirty and last reference in memory
-    mip->locked=0;
+  if(--mip->refCount == 0 && mip->dirty)
+  {
+    //if dirty and last reference in memory
+    mip->locked = 0;
+
+    // TODO: What if the the buf to write to this inode exceeds 1KB?
+    // We
     memcpy(buf, mip->INODE, BLKSIZE);
     put_block(mip->dev, blk, buf);//write back
   }
-  else if(mip->refCount>0||!mip->dirty)
+  else if(mip->refCount > 0 || !mip->dirty)
     return 0;
 }
+
+/******************************************************************************/
+
 int findname(MINODE *parent, int myino, char *myname){
   int n = 0, i = 0, j = 0;
   char *cp, buf[BLKSIZE];
@@ -183,6 +213,9 @@ int findname(MINODE *parent, int myino, char *myname){
   printf("search found nothing with the inode %s\n", myino);
   return 0;
 }
+
+/******************************************************************************/
+
 int findino(MINODE *mip, int *myino, int *parentino){
   char *cp, buf[BLKSIZE];
   ip=mip->INODE;
@@ -196,6 +229,9 @@ int findino(MINODE *mip, int *myino, int *parentino){
   *parentino=dp->inode;
   //printf("%d\n",dp->inode);
 }
+
+/******************************************************************************/
+
 listdir (char *pathname){
   int i, ino = 0, dev = running->cwd->dev;
   MINODE *mip = running->cwd;
@@ -211,6 +247,9 @@ listdir (char *pathname){
   // Each data block of mip->INODE contains entries
   // print the name strings of the entries
 }
+
+/******************************************************************************/
+
 ch_dir (char *pathname){
   MINODE *mip;
   int ino;
@@ -241,6 +280,9 @@ ch_dir (char *pathname){
 
   }
 }
+
+/******************************************************************************/
+
 pwd (MINODE *mip){
   MINODE *parent;
   char mname[128], temp[128], pname[128];
@@ -261,58 +303,178 @@ pwd (MINODE *mip){
   }
   printf("%s\n", pname);
 }
-kmkdir(MINODE *pmip, char *path){
+
+/******************************************************************************/
+
+kmkdir(MINODE *pmip, char *path)
+{
   MINODE *mip;
-  int ino, blk, i;
+  int ino = 0, blk = 0, i = 0;
+  INODE *ip = 0;
+  char buf[BLKSIZE];
+  char *cp;
+
+
   // 5-1. allocate an INODE and a disk block:
-  ino = ialloc(dev);
-  blk = balloc(dev);
-  mip = iget(dev,ino); // load INODE into an minode
-  mip->INODE->i_block[0]=blk;
-  for(i=1;i<12;i++){mip->INODE->i_block[i]=0;}
-  mip->dirty=1;
+  ino = ialloc(pmip->dev);
+  blk = balloc(pmip->dev);
+  mip = iget(pmip->dev,ino); // load INODE into an minode
+
+  // set alias of the memory inode
+  ip = &(mip->INODE);
+
+  // KEEP IN MIND running IS A GLOBAL PROC POINTER
+  ip->i_mode = DIR_MODE;		  // Leading 040 (DIR type) 755 (access permissions)
+  ip->i_uid  = running->uid;	// Owner uid from PROC
+  ip->i_gid  = running->gid;	// Group Id from PROC
+  ip->i_size = BLOCK_SIZE;		// Size in bytes (1024)
+  ip->i_links_count = 2;	    // For . (alias of curr dir) and .. (parent dir)
+  ip->i_atime = ip->i_ctime = ip->i_mtime = time(0L);  // set to current time
+  ip->i_blocks = 2;           // Size is 1024, each block 'chunk' is 512 bytes
+                              // So we need 2 blocks (2*512 = 1024)
+
+  ip->i_block[0] = blk;       // DIR has one direct data block (which was
+                              // allocated by balloc)
+
+  // Initialize remaining (skip first direct block) data blocks to 0
+  for(i = 1;i < 15;i++)
+  {
+    ip->i_block[i] = 0;
+  }
+
+  // Mark our memory inode as dirty so then we can write it to the image file
+  mip->dirty = 1;
+  // Now write it
   iput(mip);
+
   //make . and ..
   //enter_child
 
-  // 5-2. initialize mip->INODE as a DIR INODE;
-  // mip ->INODE.i_block[0] = blk; other i_block[ ] are 0;
-  // mark minode modified (dirty);
-  // iput(mip); // write INODE back to disk
-  // 5-3. make data block 0 of INODE to contain . and .. entries;
+  // Open up this data block we just allocated so we can write the actual data
+  get_block(mpip->dev, blk, buf);
 
-  // write to disk block blk.
+  // deep copy the buf. y? because fuck you that's why
+  cp = buf;
+  // Type cast to dir entry (because that's the type of data we want to write
+  // to the buf when all is said and done)
+  dp = (DIR *)cp
+  // From the newly created inode (this is the "." alias in a directory (a ref
+  // to its self))
+  dp->inode = ino;
+  dp->name_len = strlen(".");
+  // The rec_len is 12 bytes ... why?
+  dp->rec_len = 4 *((11 + dp->name_len) / 4);
+  dp->file_type = 0;
+  strcpy(dp->name, ".");
+
+  // Now create the parent alias (..) to the parent directory
+  cp += dp->rec_len;
+  dp = (DIR *)cp;
+  // Parent inode #
+  dp->inode = pmip->ino;
+  dp->name_len = strlen("..");
+  // Take up the the remaining length of the record because this is the last\
+     entry to make while creating a whole new DIR
+  dp->rec_len = 1012;
+  dp->file_type = 0;
+  strcpy(dp->name, "..");
+
+  // Write this i_block[0] back into memory, we have created the directory
+  put_block(pmip->dev, blk, buf);
+
   // 5-4. enter_child(pmip, ino, basename); which enters
   // (ino, basename) as a DIR entry to the parent INODE;
 }
-mk_dir(char *pathname){
+
+/******************************************************************************/
+
+mk_dir(char *pathname)
+{
   char temp[128], *dname, *bname;
   int pino, d=0, b=0;
   MINODE *pmip;
   strcpy(temp, pathname);
-  dname=dirname(temp);
-  bname=basename(pathname);
-  if(pathname[0]=='/'){
+  dname = dirname(temp);
+  bname = basename(pathname);
+  if(pathname[0]=='/')
+  {
     dev=root->dev;
     if(!search(dname, root))
       d=1;
   }
-  else{
+  else
+  {
     dev = running->cwd->dev;
     if(!search(dname, running->cwd))
       d=1;
   }
-  if(d=0){
+  if(d = 0)
+  {
     printf("dirname does not exist\n");
     return 0;
   }
   pino=getino(&dev, dname);
   pmip=iget(dev,dname);
-  if(search(pmip, bname)){
+  if(search(pmip, bname))
+  {
     printf("basename already exists\n");
     return 0;
   }
   kmkdir(pmip, bname);
+}
+
+/******************************************************************************/
+
+enter_child(MINODE *pmip, int ino, char* basename)
+{
+  int i = 0, remain = 0, newblock = 0, flag = 0;
+  INODE *ip, /* the alias to our parent node Frodo!*/*pipn = &mpip->INODE;
+  char buf[BLKSIZE];
+  char *cp;
+
+  // Iterate through any current directories in the parent inode
+  for (/*Muh clutch skip*/; i < 12 /* Only direct blocks for now */; i++)
+  {
+    if(pipn->i_block[i] == 0)
+    {
+      // Found an empty block that we can add our new dir entry that is the \
+         child to this parent directory
+      flag = 1;
+      break;
+    }
+
+    // else iterate over the i_blocks that are occupied (by other dirs/files)
+    
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 }

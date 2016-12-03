@@ -5,6 +5,8 @@ typedef unsigned int   u32;
 
 typedef struct ext2_super_block SUPER;
 typedef struct ext2_group_desc  GD;
+// What is the size of an INODE in an ext2 file system?\
+   128 bytes
 typedef struct ext2_inode       INODE;
 typedef struct ext2_dir_entry_2 DIR;
 
@@ -19,7 +21,7 @@ DIR   *dp;
 #define ROOT_INODE        2
 
 //dir and file modes and ext2 magic number
-#define DIR_MODE    0040777
+#define DIR_MODE    0040755
 #define FILE_MODE   0100644
 #define SUPER_MAGIC  0xEF53
 #define SUPER_USER        0

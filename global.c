@@ -8,7 +8,10 @@
 
 MINODE minode[NMINODE];
 MINODE *root;
+
+// The process that is running, currently fuck fork
 PROC   proc[NPROC], *running;
+
 MOUNT  mounttab[NMOUNT];
 OFT    oft[NOFT];
 
