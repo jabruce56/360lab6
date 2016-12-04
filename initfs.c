@@ -4,7 +4,8 @@ int nproc=0;
 int init(){ // Initialize data structures of LEVEL-1:
      int i, j;
      PROC *p;
-     //reset global proc and minode
+     
+     //reset global proc, minode, mounttab, and oft
      for(i=0;i<NPROC;i++){
        p=&proc[i];
        p->status=FREE;
@@ -15,11 +16,20 @@ int init(){ // Initialize data structures of LEVEL-1:
      for(i=0;i<NMINODE;i++){minode[i].refCount=0;}
      for(i=0;i<NMOUNT;i++){mounttab[i].busy=0;}
      for(i=0;i<NOFT;i++){oft[i].refCount=0;}
+     
      printf("mounting root..\n");
      mount_root();
      printf("mount complete\n");
 
-     printf("starting P0\n");
+     srand(time(NULL));
+     if(rand()%5==0)
+     {
+      printf("starting granddaddy P0\n");
+     }
+     else
+     {
+      printf("starting P0\n");
+     }
      p = &proc[0];
      running=&proc[0];
      p->status = RUNNING;
@@ -46,6 +56,8 @@ int init(){ // Initialize data structures of LEVEL-1:
      p->cwd->refCount++;
      nproc=2;
 }
+
+
 int mount_root(){  // mount root file system, establish / and CWDs
   int i, ino, fd;
   SUPER *sp;
@@ -105,8 +117,9 @@ int main()
   {
     char line[256], cname[128], path[128];
     int cmd;
+    
+    
     init();
-    // printf("proc[0].pid=%d\nproc[0].status=%d\nproc[0].uid=%d\nproc[0].",proc[0].pid,proc[0].status,proc[0].uid);
     printf("dev=%d\n",dev);
     printf("init complete\n");
     while(1){
