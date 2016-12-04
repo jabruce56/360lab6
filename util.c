@@ -1,4 +1,3 @@
-//#include "type.h"
 char *name[64];
 
 /******************************************************************************/
@@ -16,12 +15,11 @@ int put_block(int fd, int blk, char buf[ ]){
 }
 
 /******************************************************************************/
-
+//tokenize pathname into name[]
 int tokenize(char *pathname){
   char *token, path[128], names[64][64];
   int i = 0, j;
   strcpy(path, pathname);
-  //printf("tokenizepath=%s\n", path);
   token = strtok(path, "/");
   while(token!=NULL&&i<64){
     strcpy(names[i], token);
@@ -31,14 +29,7 @@ int tokenize(char *pathname){
   }
   return i;
 }
-//http://man7.org/linux/man-pages/man3/basename.3.html
-// path       dirname   basename
-// /usr/lib   /usr      lib
-// /usr/      /         usr
-// usr        .         usr
-// /          /         /
-// .          .         .
-// ..         .         ..
+
 
 /******************************************************************************/
 
@@ -98,16 +89,17 @@ u32 search(MINODE *mip, char *pathname){
 
 u32 getino(int *dev, char *pathname){//returns inode # of a pathname
   int n, i, ino, inostrt;
+  //change dev if necessary
   if(pathname[0]=='/')
     dev = root->dev;
   else
     dev = running->cwd->dev;
+  
   n=tokenize(pathname);
   for(i=0;i<n;i++){
-    ino = search(running->cwd->INODE, name[i]);
-    if(ino==0)
+    ino = search(running->cwd->INODE, name[i]);//search takes INODE
+    if(ino==0)//if nothing found, return nothing
       return 0;
-    //printf("found:%s at:%d\n", name[i], ino);
   }
   return ino;
 }
@@ -119,6 +111,7 @@ MINODE *iget(int dev, u32 ino){
   char buf[BLKSIZE];
   int i, blk, offset;
   MINODE *mip;
+  
   //find inode on disk w/ mailmans
   blk=(ino-1)/8+mounttab[0].iblk;
   offset=(ino-1)%8;
@@ -175,7 +168,7 @@ int iput(MINODE *mip){//release inode from memory
     mip->locked = 0;
 
     // TODO: What if the the buf to write to this inode exceeds 1KB?
-    // We
+    // We win
     memcpy(buf, mip->INODE, BLKSIZE);
     put_block(mip->dev, blk, buf);//write back
   }
@@ -290,7 +283,7 @@ pwd (MINODE *mip){
   memset(mname, '\0', 128);
   memset(temp, '\0', 128);
   memset(pname, '\0', 128);
-  while(1){
+  while(1){//loop back through each dir until root and append along the way
     findino(mip, &myino, &parentino);
     parent = iget(dev, parentino);
     findname(parent, myino, mname);
@@ -421,8 +414,10 @@ mk_dir(char *pathname)
     return 0;
   }
   kmkdir(pmip, bname);
+  pmip->dirty=1;//mark it dirty
+  iput(pmip);//write it to image
 }
-
+// blaze it
 /******************************************************************************/
 
 enter_child(MINODE *pmip, int ino, char* basename)
@@ -444,7 +439,29 @@ enter_child(MINODE *pmip, int ino, char* basename)
     }
 
     // else iterate over the i_blocks that are occupied (by other dirs/files)
+    get_block(pmip->dev, pipn->i_block[i], buf);
+    // type cast the buf to a dir entry offset
+    dp = (DIR *)buf;
+    cp = buf;
     
+    // Just like in lab 3 when we had to print dir entries, instead we just \
+       iterate over the dir entries (based off of their variable size)
+    while(cp + dep->rec_len < buf + BLKSIZE)
+    {
+      cp += dp->rec_len;
+      dp = (DIR *)cp;
+    }
+    
+    // our directory pointer is on the last dir entry of this block
+    // here we need to check if we have an 'ideal' length
+    remain = dp->rec_len - (4 *((11 + strlen(dp->name)) / 4));
+    if(remain >= (4 *((11 + strlen(basename)) / 4)))
+    {
+      // trim last entry's rec_length to ideal_length
+      dp->rec_len = 4 * ((11 + strlen(dp->name)) / 4);
+       
+      
+    }
 
   }
 
