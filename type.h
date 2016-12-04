@@ -10,6 +10,7 @@ typedef struct ext2_group_desc  GD;
 typedef struct ext2_inode       INODE;
 typedef struct ext2_dir_entry_2 DIR;
 
+// global variables, since we can get away with this
 SUPER *sp;
 GD    *gp;
 INODE *ip;
@@ -41,41 +42,43 @@ DIR   *dp;
 #define NMOUNT           10
 
 
-typedef struct minode{//in memory inodes
-  INODE        *INODE;
-  int          dev, ino;
-  int          refCount;
-  int          dirty;
-  int          mounted;
-  struct mount *mountptr;
-  struct proc  *next;
-  struct proc  *parent;
-  struct proc  *child;
-  struct proc  *sibling;
-}MINODE;
+typedef struct minode{ // RAM memory inodes
+  INODE         *INODE;
+  int           dev, ino;
+  int           refCount;
+  int           dirty;
+  int           mounted;
+  int           locked;
+  struct mount  *mountptr;
+}              MINODE;
 
 typedef struct mount{
-  int    dev;
-  int    nblocks, ninodes;
-  int    bmap, imap, iblk;
-  MINODE *mounted_inode;
-  char   name[64];
-  char   mount_name[64];
-}MOUNT;
+  int           dev;
+  int           nblocks, ninodes;
+  int           bmap, imap, iblk;
+  int           busy;
+  MINODE        *mounted_inode;
+  char          name[64];
+  char          mount_name[64];
+}              MOUNT;
 
-typedef struct oft{//open file table
-  int    mode;
-  int    refCount;
-  MINODE *mptr;
-  int    offset;
-}OFT;
+typedef struct oft{ //open file table
+  int           mode;
+  int           refCount;
+  MINODE        *mptr;
+  int           offset;
+}              OFT;
 
-typedef struct proc{
-  struct proc *next;
-  int          pid;
-  int          ppid;
-  int          status;
-  int          uid, gid;
-  MINODE       *cwd;
-  OFT          *fd[NFD];
-}PROC;
+typedef struct proc{ //process structure
+  int           pid;
+  int           ppid;
+  int           status;
+  int           uid, gid;
+  struct proc   *next;
+  struct proc   *parent;
+  struct proc   *child;             //first child
+  struct proc   *sibling;           //list of other children
+  MINODE        *cwd;
+  OFT           *fd[NFD];
+}              PROC;
+

@@ -24,7 +24,7 @@ int init(){ // Initialize data structures of LEVEL-1:
      srand(time(NULL));
      if(rand()%5==0)
      {
-      printf("starting granddaddy P0\n");
+      printf("starting 'creationism' P0\n");
      }
      else
      {
@@ -40,7 +40,8 @@ int init(){ // Initialize data structures of LEVEL-1:
      p->gid = 0;
      p->parent = p;
      p->sibling = p;
-     p->child=0;
+     //p->next?
+     p->child = 0;
      p->cwd = root;
      p->cwd->refCount++;
 
@@ -52,6 +53,11 @@ int init(){ // Initialize data structures of LEVEL-1:
      p->pid = 1;
      p->ppid = 0;
      p->gid = 0;
+     //these ones too??
+    // p->parent = p;
+    // p->sibling = p;
+    // //p->next?
+    // p->child = 0;
      p->cwd = root;
      p->cwd->refCount++;
      nproc=2;

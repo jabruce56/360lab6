@@ -182,22 +182,27 @@ int findname(MINODE *parent, int myino, char *myname){
   int n = 0, i = 0, j = 0;
   char *cp, buf[BLKSIZE];
   ip = parent->INODE;
-  for(i=0;i<12;i++){
+  for(i=0;i<12;i++)
+  {
     if(ip->i_block[i]==0)
+    {
       return -1;
+    }
     get_block(dev, ip->i_block[i], buf);
     dp=(DIR *)buf;
     cp = buf;
-    while(*cp){
-      if(dp->inode==myino){
-        if(myino==2){
+    while(dp->rec_len)
+    {
+      if(dp->inode==myino)
+      {
+        if(myino==2)
+        {
           strcpy(myname,"/");
         }
         else
+        {
           strcpy(myname, dp->name);
-        // for(i=0;i<dp->name_len;i++){
-        //   printf("%c", dp->name[i]);
-        // }
+        }
       }
       cp += dp->rec_len;
       dp = (DIR *)cp;
@@ -211,16 +216,17 @@ int findname(MINODE *parent, int myino, char *myname){
 
 int findino(MINODE *mip, int *myino, int *parentino){
   char *cp, buf[BLKSIZE];
-  ip=mip->INODE;
-  get_block(dev, ip->i_block[0], buf);
-  dp=(DIR *)buf;
+  
+  ip=mip->INODE;                      //get INODE
+  get_block(dev, ip->i_block[0], buf);//move to first data block for . and ..
+                                    
+  dp=(DIR *)buf;                      //set myino to the inode of .
   cp=buf;
   *myino=dp->inode;
-  //printf("%d\n",dp->inode);
-  cp+=dp->rec_len;
+  
+  cp+=dp->rec_len;                    //set parentino to the inode of ..
   dp=(DIR *)cp;
   *parentino=dp->inode;
-  //printf("%d\n",dp->inode);
 }
 
 /******************************************************************************/
@@ -246,27 +252,21 @@ listdir (char *pathname){
 ch_dir (char *pathname){
   MINODE *mip;
   int ino;
-  if(pathname[0]=='\0'||
-    (pathname[0]=='/'&&strlen(pathname)==1)){//cd to root;
-      dev = root->dev;
-      iput(running->cwd);
-      running->cwd=root;
-
+  if(pathname[0]=='\0' ||           //if no pathname give
+    (pathname[0]=='/' &&            //or if the first char is /
+      strlen(pathname)==1))         //and its the only char
+  {                                 //cd to root
+      dev = root->dev;              //update dev
+      iput(running->cwd);           
+      running->cwd=root;            //set to root
   }
-  else if(pathname[0]=='/'&&strlen(pathname)>1){
-    //go to root first
-    dev = root->dev;
-    iput(running->cwd);
-    running->cwd=root;
-    ino=getino(&dev, &pathname[1]);
-    if(ino)
-      running->cwd=iget(dev, ino);
-  }
-  else{//cd to pathname;
-    ino = getino(&dev, pathname);
-    //printf("switching to inode %d\n", ino);
-    if(ino){
-      running->cwd=iget(dev, ino);
+  else
+  {                                 //cd to pathname
+    ino = getino(&dev, pathname);   //gets inode # from pathname
+    if(ino)                         //if ino found
+    {
+      iput(running->cwd);           
+      running->cwd=iget(dev, ino);  
     }
     else
       printf("invalid pathname for cd\n");
@@ -279,22 +279,29 @@ ch_dir (char *pathname){
 pwd (MINODE *mip){
   MINODE *parent;
   char mname[128], temp[128], pname[128];
-  int myino=0, parentino=1;
+  int myino=0, parentino=1, i =0;
+  if (mip->ino==2)                    //if root just print / and return
+  {
+    printf("/\n");
+    return 0;
+  }
   memset(mname, '\0', 128);
   memset(temp, '\0', 128);
   memset(pname, '\0', 128);
-  while(1){//loop back through each dir until root and append along the way
-    findino(mip, &myino, &parentino);
-    parent = iget(dev, parentino);
-    findname(parent, myino, mname);
-    strcpy(temp, mname);
+  while(mip->ino>2)                  //loop back through each dir until root
+  {                                   //and append along the way
+    findino(mip, &myino, &parentino); //returns ino and parent ino (. and ..)
+    parent = iget(dev, parentino);    //get the parent inode into memory
+    findname(parent, myino, mname);   //returns mname, the dirname of myino in 
+                                      //parent
+    strcpy(temp, "/");
+    strcat(temp, mname);              //temp to help append to front of string
     strcat(temp, pname);
     strcpy(pname, temp);
-    if(!strncmp(mname, "/", 1))
-      break;
-    mip=parent;
+    
+    mip=parent;                       //continue up parent
   }
-  printf("%s\n", pname);
+  printf("%s\n", pname);              //print when done
 }
 
 /******************************************************************************/
@@ -320,7 +327,7 @@ kmkdir(MINODE *pmip, char *path)
   ip->i_mode = DIR_MODE;		  // Leading 040 (DIR type) 755 (access permissions)
   ip->i_uid  = running->uid;	// Owner uid from PROC
   ip->i_gid  = running->gid;	// Group Id from PROC
-  ip->i_size = BLOCK_SIZE;		// Size in bytes (1024)
+  ip->i_size = BLKSIZE;		// Size in bytes (1024)
   ip->i_links_count = 2;	    // For . (alias of curr dir) and .. (parent dir)
   ip->i_atime = ip->i_ctime = ip->i_mtime = time(0L);  // set to current time
   ip->i_blocks = 2;           // Size is 1024, each block 'chunk' is 512 bytes
@@ -344,13 +351,13 @@ kmkdir(MINODE *pmip, char *path)
   //enter_child
 
   // Open up this data block we just allocated so we can write the actual data
-  get_block(mpip->dev, blk, buf);
+  get_block(pmip->dev, blk, buf);
 
   // deep copy the buf. y? because fuck you that's why
   cp = buf;
   // Type cast to dir entry (because that's the type of data we want to write
   // to the buf when all is said and done)
-  dp = (DIR *)cp
+  dp = (DIR *)cp;
   // From the newly created inode (this is the "." alias in a directory (a ref
   // to its self))
   dp->inode = ino;
@@ -423,12 +430,12 @@ mk_dir(char *pathname)
 enter_child(MINODE *pmip, int ino, char* basename)
 {
   int i = 0, remain = 0, newblock = 0, flag = 0;
-  INODE *ip, /* the alias to our parent node Frodo!*/*pipn = &mpip->INODE;
+  INODE *ip, /* the alias to our parent node Frodo!*/*pipn = &pmip->INODE;
   char buf[BLKSIZE];
   char *cp;
 
   // Iterate through any current directories in the parent inode
-  for (/*Muh clutch skip*/; i < 12 /* Only direct blocks for now */; i++)
+  for (; i < 12 /* Only direct blocks for now */; i++)
   {
     if(pipn->i_block[i] == 0)
     {
@@ -446,7 +453,7 @@ enter_child(MINODE *pmip, int ino, char* basename)
     
     // Just like in lab 3 when we had to print dir entries, instead we just \
        iterate over the dir entries (based off of their variable size)
-    while(cp + dep->rec_len < buf + BLKSIZE)
+    while(cp + dp->rec_len < buf + BLKSIZE)
     {
       cp += dp->rec_len;
       dp = (DIR *)cp;
@@ -459,39 +466,31 @@ enter_child(MINODE *pmip, int ino, char* basename)
     {
       // trim last entry's rec_length to ideal_length
       dp->rec_len = 4 * ((11 + strlen(dp->name)) / 4);
-       
       
+      // I don't know if this segement is necessary 
+      cp += dp->rec_len;
+      dp = (DIR *)cp;
+      
+      // If we are here this means that an existing data block has enough space
+      // to insert the child directory so we will
+      newblock = pipn->i_block[i];
+      break;
+      // enter new entry as last entry with rec_len = remain
+    }
+  }
+    
+    // Short circuit evalua
+    if(flag == 1)
+    {
+      // No current block that can hold the child directory, so allocate a new\
+         block
+      newblock = balloc(pip->dev);
+      // index i is pointing to an empty data block so now add the data block
+      // to 
+      pipn->i_block[i] = newblock;
+       
     }
 
-  }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  
 
 }
