@@ -17,10 +17,12 @@ int init(){ // Initialize data structures of LEVEL-1:
      for(i=0;i<NMOUNT;i++){mounttab[i].busy=0;}
      for(i=0;i<NOFT;i++){oft[i].refCount=0;}
      
+     //mount root
      printf("mounting root..\n");
      mount_root();
      printf("mount complete\n");
 
+     //start processes
      srand(time(NULL));
      if(rand()%5==0)
      {
@@ -40,8 +42,8 @@ int init(){ // Initialize data structures of LEVEL-1:
      p->gid = 0;
      p->parent = p;
      p->sibling = p;
-     //p->next?
-     p->child = 0;
+     //!!!!p->next=?
+     p->child = 0;// = 0?
      p->cwd = root;
      p->cwd->refCount++;
 
@@ -53,11 +55,11 @@ int init(){ // Initialize data structures of LEVEL-1:
      p->pid = 1;
      p->ppid = 0;
      p->gid = 0;
-     //these ones too??
-    // p->parent = p;
-    // p->sibling = p;
-    // //p->next?
-    // p->child = 0;
+     //!!!!these ones too??
+    // p->parent = ?;
+    // p->sibling = ?;
+    // //p->next = ?;
+    // p->child = ?;
      p->cwd = root;
      p->cwd->refCount++;
      nproc=2;
@@ -66,9 +68,7 @@ int init(){ // Initialize data structures of LEVEL-1:
 
 int mount_root(){  // mount root file system, establish / and CWDs
   int i, ino, fd;
-  SUPER *sp;
   MOUNT *mp;
-  MINODE *ip;
   char buf[BLKSIZE], *rootdev;
 
 //  open device for RW (get a file descriptor dev for the opened device)
@@ -86,14 +86,13 @@ int mount_root(){  // mount root file system, establish / and CWDs
     exit(0);
   }
   printf("valid ext2 fs\n");
-  mp = &mounttab[0];
-  nblocks = sp->s_blocks_count;
+  mp = &mounttab[0];            //use of mp for cleaner/easier code
+  nblocks = sp->s_blocks_count; //save # of blocks and # of inodes
   ninodes = sp->s_inodes_count;
   mp->ninodes=ninodes;
   mp->nblocks=nblocks;
 
-  //save group desc info
-  get_block(dev, 2, buf);
+  get_block(dev, 2, buf);       //save group desc info
   gp = (GD *)buf;
   mp->dev=dev;
   mp->bmap=gp->bg_block_bitmap;
@@ -103,15 +102,15 @@ int mount_root(){  // mount root file system, establish / and CWDs
 
   strcpy(mp->name, "disk");
   strcpy(mp->mount_name, "/");
-  printf("bmap=%d  ",   gp->bg_block_bitmap);
-  printf("imap=%d  ",   gp->bg_inode_bitmap);
+  printf("bmap=%d  ",   gp->bg_block_bitmap);//print out more stuff
+  printf("imap=%d  ",   gp->bg_inode_bitmap);//for quick checks
   printf("iblock=%d\n", gp->bg_inode_table);
   printf("dev=%d\n", dev);
   printf("iget root\n");
-  root=iget(dev, 2);
+  root=iget(dev, 2);                        //put root into memory
   mp->mounted_inode=root;
   root->mountptr = mp;
-  proc[0].cwd=iget(dev,2);
+  proc[0].cwd=iget(dev,2);                  //set P0 and P1 cwd to root
   proc[1].cwd=iget(dev,2);
   printf("root mounted\n");
 }
@@ -124,25 +123,35 @@ int main()
     char line[256], cname[128], path[128];
     int cmd;
     
-    
-    init();
-    printf("dev=%d\n",dev);
+    init();                                   //intitialize image and mount_root
+    printf("dev=%d\n",dev);                   //print dev for quick check
     printf("init complete\n");
-    while(1){
-      memset(line, '\0', 256);
+    
+    while(1)                                  //loop FOREVER... or until quit
+    {
+      memset(line, '\0', 256);                //memset for safeties
       memset(cname, '\0', 128);
       memset(path, '\0', 128);
       printf("command: ");
       fgets(line, 256, stdin);
-      sscanf(line, "%s %s", cname, path);
-      if(!strncmp(cname, "mkdir", 5))
+      sscanf(line, "%s %s", cname, path);     //parse the command and path
+    
+      if(!strncmp(cname, "mkdir", 5))         //do command
+      {
         mk_dir(path);
+      }
       else if(!strncmp(cname, "cd", 2))
+      {
         ch_dir(path);
+      }
       else if(!strncmp(cname, "pwd", 3))
+      {
         pwd(running->cwd);
+      }
       else if(!strncmp(cname, "ls", 2))
+      {
         listdir(path);
+      }
         // else if(!strncmp(cname, "mount", 5))
         //   return 4;
         // else if(!strncmp(cname, "umount", 6))
@@ -213,18 +222,25 @@ int main()
 
 
 int quit()
-{
-//      iput all DIRTY minodes before shutdown
+{                         //iput all DIRTY minodes before shutdown
   int i;
   srand(time(NULL));
-  if(rand()%5==0)
+  if(rand()%5==0)         //why not
+  {
     printf("cleaning up all those dirty inodes ;)...\n");
+  }
   else
+  {
     printf("closing file system...\n");
+  }
   usleep(650);
-  for(i=0;i<NMINODE;i++)
-    if(minode[i].dirty)
+  for(i=0;i<NMINODE;i++)  //iter through all MINODES
+  {
+    if(minode[i].dirty)   //!!!! should we iput all MINODES and let it handle dirtyness?? !!!!
+    {
       iput(&minode[i]);
-  printf("complete\n");
+    }  
+  }
+  printf("complete\n");   //el fin
   exit(0);
 }
