@@ -1,10 +1,11 @@
-#include "type.h"
-#include "include.h"
-int nproc=0;
+#include "lib/globals.h"
+
+
+int nproc = 0;
 int init(){ // Initialize data structures of LEVEL-1:
      int i, j;
      PROC *p;
-     
+
      //reset global proc, minode, mounttab, and oft
      for(i=0;i<NPROC;i++){
        p=&proc[i];
@@ -16,7 +17,7 @@ int init(){ // Initialize data structures of LEVEL-1:
      for(i=0;i<NMINODE;i++){minode[i].refCount=0;}
      for(i=0;i<NMOUNT;i++){mounttab[i].busy=0;}
      for(i=0;i<NOFT;i++){oft[i].refCount=0;}
-     
+
      //mount root
      printf("mounting root..\n");
      mount_root();
@@ -72,7 +73,8 @@ int mount_root(){  // mount root file system, establish / and CWDs
   char buf[BLKSIZE], *rootdev;
 
 //  open device for RW (get a file descriptor dev for the opened device)
-  dev = open("disk", O_RDWR);
+  dev = open("disk", O_RDWR);// "disk" - multiple dirs and files
+                           //or "mydisk" - multiple nested dirs
   if(dev<0){
     printf("open disk failed\n");
     exit(1);
@@ -107,8 +109,8 @@ int mount_root(){  // mount root file system, establish / and CWDs
   printf("iblock=%d\n", gp->bg_inode_table);
   printf("dev=%d\n", dev);
   printf("iget root\n");
-  root=iget(dev, 2);                        //put root into memory
-  mp->mounted_inode=root;
+  root = iget(dev, 2);                        //put root into memory
+  mp->mounted_inode = root;
   root->mountptr = mp;
   proc[0].cwd=iget(dev,2);                  //set P0 and P1 cwd to root
   proc[1].cwd=iget(dev,2);
@@ -122,11 +124,11 @@ int main()
   {
     char line[256], cname[128], path[128];
     int cmd;
-    
+
     init();                                   //intitialize image and mount_root
     printf("dev=%d\n",dev);                   //print dev for quick check
     printf("init complete\n");
-    
+
     while(1)                                  //loop FOREVER... or until quit
     {
       memset(line, '\0', 256);                //memset for safeties
@@ -135,7 +137,7 @@ int main()
       printf("command: ");
       fgets(line, 256, stdin);
       sscanf(line, "%s %s", cname, path);     //parse the command and path
-    
+
       if(!strncmp(cname, "mkdir", 5))         //do command
       {
         mk_dir(path);
@@ -150,7 +152,7 @@ int main()
       }
       else if(!strncmp(cname, "ls", 2))
       {
-        listdir(path);
+        findpdir(path);
       }
         // else if(!strncmp(cname, "mount", 5))
         //   return 4;
@@ -233,13 +235,13 @@ int quit()
   {
     printf("closing file system...\n");
   }
-  usleep(650);
+  usleep(850);
   for(i=0;i<NMINODE;i++)  //iter through all MINODES
   {
     if(minode[i].dirty)   //!!!! should we iput all MINODES and let it handle dirtyness?? !!!!
     {
       iput(&minode[i]);
-    }  
+    }
   }
   printf("complete\n");   //el fin
   exit(0);
