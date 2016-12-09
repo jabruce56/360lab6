@@ -5,7 +5,7 @@
 link(char *old_file, char *new_file)
 {
   int oino, nino, pino, odev, ndev, pdev;
-  MINODE *omip, *nmip;
+  MINODE *omip, *nmip, *pmip;
   char *ndirname, *nbasename;
   // 1. // verify old_file exists and is not DIR;
   strcpy(ndirname, new_file);
@@ -14,7 +14,7 @@ link(char *old_file, char *new_file)
   nbasename=basename(nbasename);
   oino = getino(&odev, old_file);
   omip = iget(odev, oino);
-  if(omip->INODE->i_mode==DIR_MODE) // check file type (cannot be DIR)
+  if(omip->fiji.i_mode==DIR_MODE) // check file type (cannot be DIR)
   {
     printf("error: attempting to link dir\n");
     return 0;
@@ -33,7 +33,7 @@ link(char *old_file, char *new_file)
   //mcreat(ndirname); // 3. // creat entry in new_parent DIR with same ino
   pmip = iget(&pdev, pino);
   //enter_name(pmip, omip->ino, basename(new_file));
-  omip->INODE.i_links_count++;
+  omip->fiji.i_links_count++;
   omip->dirty = 1;
   iput(omip);
   iput(pmip);

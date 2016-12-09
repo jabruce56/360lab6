@@ -13,9 +13,9 @@ findpdir (char *pathname){//takes pathname, finds its MINODE and then calls
     if(ino)//if the MINODE exists get it, otherwise print cwd dir
       mip = iget(dev, ino);
   }
-  pdir(mip->INODE);
-  if(ino)//if iget was called, iput
-    iput(mip);
+  pdir(&(mip->fiji));
+ // if(ino)//if iget was called, iput
+   // iput(mip);
   // mip points at minode;
   // Each data block of mip->INODE contains entries
   // print the name strings of the entries

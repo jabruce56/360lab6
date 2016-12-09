@@ -73,7 +73,7 @@ int mount_root(){  // mount root file system, establish / and CWDs
   char buf[BLKSIZE], *rootdev;
 
 //  open device for RW (get a file descriptor dev for the opened device)
-  dev = open("disk", O_RDWR);// "disk" - multiple dirs and files
+  dev = open("diskimage", O_RDWR);// "disk" - multiple dirs and files
                            //or "mydisk" - multiple nested dirs
   if(dev<0){
     printf("open disk failed\n");
@@ -148,7 +148,7 @@ int main()
       }
       else if(!strncmp(cname, "pwd", 3))
       {
-        pwd(running->cwd);
+        pwd();
       }
       else if(!strncmp(cname, "ls", 2))
       {

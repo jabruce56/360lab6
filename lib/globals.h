@@ -5,6 +5,7 @@
 #include <string.h>
 #include <libgen.h>
 #include <sys/stat.h>
+#include "ext2.h"
 
 // typecasting and defining custom variables/structs
 typedef unsigned char  u8;
@@ -51,7 +52,7 @@ typedef struct ext2_dir_entry_2 DIR;
 
 //ext2 structures
 typedef struct minode{ // RAM memory inodes
-  INODE         *INODE;
+  INODE         fiji;//yes
   int           dev, ino;
   int           refCount;
   int           dirty;
@@ -131,7 +132,7 @@ char *name[64];
 
 
 // Core functions for the POS-EXT2FS
-#include "ext2.h"
+
 
 #include "../blk_ino_io/bit.c"
 #include "../blk_ino_io/blk.c"
@@ -141,8 +142,6 @@ char *name[64];
 #include "../dir/path_util.c"
 #include "../dir/misc_util.c"
 #include "../dir/mk_rm_dir.c"
-
-
 
 #include "../file/create_rm.c"
 #include "../file/link.c"
